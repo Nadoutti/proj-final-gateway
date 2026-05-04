@@ -31,7 +31,7 @@ jobs:
         key: ${{ secrets.KEY_TEST }}
         port: 22
         script: |
-          cd ~/gateway-folder || mkdir ~/gateway-folder && cd ~/gateway-folder
+          mkdir -p ~/gateway-folder && cd ~/gateway-folder
           
           export JWT_SECRET="${{ secrets.JWT_SECRET }}"
           export JWT_ALGORITHM="HS256"
