@@ -1,53 +1,44 @@
-name: Deploy Gateway
+name: Deploy automatico ingressos
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: "carloslifranco"
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: "nadoutti"
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-    - name: Build and push
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: carloslifranco/gateway:latest
-    - name: Copy docker-compose to server
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.HOST_TEST }}
-        username: "ubuntu"
-        key: ${{ secrets.KEY_TEST }}
-        port: 22
-        source: "docker-compose.yml" # ou o nome que estiver no seu repo
-        target: "~/gateway-folder"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.HOST_TEST }}
-        username: "ubuntu"
-        key: ${{ secrets.KEY_TEST }}
-        port: 22
-        script: |
-          mkdir -p ~/gateway-folder && cd ~/gateway-folder
-          
-          export JWT_SECRET="${{ secrets.JWT_SECRET }}"
-          export JWT_ALGORITHM="HS256"
-          export USUARIOS_SERVICE_URL="http://user:8001"
-          export EVENTOS_SERVICE_URL="http://eventos:8002"
-          export INGRESSOS_SERVICE_URL="http://tickets-service:8000"
-          export APP_PORT=8080
-          
-          docker compose pull
-          docker compose up -d --build
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: nadoutti/gateway-zambom:${{ github.sha }}
+
+      - name: executing remote ssh commands using password
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST_TEST }}
+          username: "ubuntu"
+          key: ${{ secrets.KEY_TEST }}
+          port: 22
+          script: |
+            docker stop gateway-zambom
+            docker rm --force gateway-zambom
+            docker run  -d -p 8082:8004 -e SUPABASE_URL=${{ secrets.SUPABASE_URL }} -e SUPABASE_KEY=${{ secrets.SUPABASE_KEY }} -e USUARIOS_SERVICE_URL=${{ secrets.USUARIOS_SERVICE_URL }} -e EVENTOS_SERVICE_URL=${{ secrets.EVENTOS_SERVICE_URL }} --network=rede --name gateway-zambom nadoutti/gateway-zambom:${{ github.sha }}
