@@ -5,9 +5,9 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
 
-    INGRESSOS_SERVICE_URL: str
-    USUARIOS_SERVICE_URL: str
-    EVENTOS_SERVICE_URL: str
+    INGRESSOS_SERVICE_URL: str = "ingressos"
+    USUARIOS_SERVICE_URL: str = "usuarios"
+    EVENTOS_SERVICE_URL: str = "eventos"
 
     APP_PORT: int = 8080
 
